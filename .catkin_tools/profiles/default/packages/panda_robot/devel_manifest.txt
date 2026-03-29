@@ -1,7 +1,0 @@
-panda_robot
-/home/ssui/catkin_ws/devel/.private/panda_robot/lib/python3/dist-packages/panda_robot/__init__.py /home/ssui/catkin_ws/devel/lib/python3/dist-packages/panda_robot/__init__.py
-/home/ssui/catkin_ws/devel/.private/panda_robot/lib/panda_robot/panda_robot.py /home/ssui/catkin_ws/devel/lib/panda_robot/panda_robot.py
-/home/ssui/catkin_ws/devel/.private/panda_robot/lib/panda_robot/demo_endeffector_keyboard.py /home/ssui/catkin_ws/devel/lib/panda_robot/demo_endeffector_keyboard.py
-/home/ssui/catkin_ws/devel/.private/panda_robot/lib/pkgconfig/panda_robot.pc /home/ssui/catkin_ws/devel/lib/pkgconfig/panda_robot.pc
-/home/ssui/catkin_ws/devel/.private/panda_robot/share/panda_robot/cmake/panda_robotConfig.cmake /home/ssui/catkin_ws/devel/share/panda_robot/cmake/panda_robotConfig.cmake
-/home/ssui/catkin_ws/devel/.private/panda_robot/share/panda_robot/cmake/panda_robotConfig-version.cmake /home/ssui/catkin_ws/devel/share/panda_robot/cmake/panda_robotConfig-version.cmake

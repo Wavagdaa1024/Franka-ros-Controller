@@ -1,2 +1,0 @@
-franka_ros_interface/franka_tools
-/home/ssui/catkin_ws/devel/.private/franka_tools/lib/python3/dist-packages/franka_tools/__init__.py /home/ssui/catkin_ws/devel/lib/python3/dist-packages/franka_tools/__init__.py

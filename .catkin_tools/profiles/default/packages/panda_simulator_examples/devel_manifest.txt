@@ -1,7 +1,0 @@
-panda_simulator/panda_simulator_examples
-/home/ssui/catkin_ws/devel/.private/panda_simulator_examples/lib/panda_simulator_examples/move_robot.py /home/ssui/catkin_ws/devel/lib/panda_simulator_examples/move_robot.py
-/home/ssui/catkin_ws/devel/.private/panda_simulator_examples/lib/panda_simulator_examples/task_space_control_with_fri.py /home/ssui/catkin_ws/devel/lib/panda_simulator_examples/task_space_control_with_fri.py
-/home/ssui/catkin_ws/devel/.private/panda_simulator_examples/lib/panda_simulator_examples/task_space_control_using_sim_only.py /home/ssui/catkin_ws/devel/lib/panda_simulator_examples/task_space_control_using_sim_only.py
-/home/ssui/catkin_ws/devel/.private/panda_simulator_examples/lib/pkgconfig/panda_simulator_examples.pc /home/ssui/catkin_ws/devel/lib/pkgconfig/panda_simulator_examples.pc
-/home/ssui/catkin_ws/devel/.private/panda_simulator_examples/share/panda_simulator_examples/cmake/panda_simulator_examplesConfig.cmake /home/ssui/catkin_ws/devel/share/panda_simulator_examples/cmake/panda_simulator_examplesConfig.cmake
-/home/ssui/catkin_ws/devel/.private/panda_simulator_examples/share/panda_simulator_examples/cmake/panda_simulator_examplesConfig-version.cmake /home/ssui/catkin_ws/devel/share/panda_simulator_examples/cmake/panda_simulator_examplesConfig-version.cmake

@@ -1,6 +1,0 @@
-franka_ros/franka_hw
-/home/ssui/catkin1_ws/devel/.private/franka_hw/lib/libfranka_control_services.so /home/ssui/catkin1_ws/devel/lib/libfranka_control_services.so
-/home/ssui/catkin1_ws/devel/.private/franka_hw/lib/libfranka_hw.so /home/ssui/catkin1_ws/devel/lib/libfranka_hw.so
-/home/ssui/catkin1_ws/devel/.private/franka_hw/lib/pkgconfig/franka_hw.pc /home/ssui/catkin1_ws/devel/lib/pkgconfig/franka_hw.pc
-/home/ssui/catkin1_ws/devel/.private/franka_hw/share/franka_hw/cmake/franka_hwConfig-version.cmake /home/ssui/catkin1_ws/devel/share/franka_hw/cmake/franka_hwConfig-version.cmake
-/home/ssui/catkin1_ws/devel/.private/franka_hw/share/franka_hw/cmake/franka_hwConfig.cmake /home/ssui/catkin1_ws/devel/share/franka_hw/cmake/franka_hwConfig.cmake
