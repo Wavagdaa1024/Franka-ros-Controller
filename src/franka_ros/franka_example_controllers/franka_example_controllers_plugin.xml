@@ -1,0 +1,11 @@
+<library path="lib/libfranka_example_controllers">
+
+  <class name="franka_example_controllers/CartesianVelocityExampleController" 
+         type="franka_example_controllers::CartesianVelocityExampleController" 
+         base_class_type="controller_interface::ControllerBase">
+    <description>
+      A controller that executes a short motion based on cartesian velocities to demonstrate correct usage, now modified to listen to Python commands!
+    </description>
+  </class>
+
+</library>
