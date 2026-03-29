@@ -42,9 +42,9 @@ class CartesianVelocityExampleController : public controller_interface::MultiInt
 
   double command_timeout_{0.10};
   double command_hold_time_{0.20};
-  double filter_time_constant_{0.02};
-  double max_linear_velocity_{0.06};
-  double max_angular_velocity_{0.20};
+  double filter_time_constant_{0.01};
+  double max_linear_velocity_{0.15};
+  double max_angular_velocity_{0.80};
   double max_linear_acceleration_{0.25};
   double max_angular_acceleration_{0.80};
   double velocity_deadband_{2e-4};

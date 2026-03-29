@@ -4,8 +4,11 @@
 import rospy
 import numpy as np
 from geometry_msgs.msg import Twist
+from sensor_msgs.msg import JointState
 from franka_msgs.msg import FrankaState
+from franka_gripper.msg import MoveActionGoal, GraspActionGoal, GraspGoal
 from tf.transformations import quaternion_from_matrix
+
 
 class FrankaCartesianVelocityController:
     # ==================== 初始化与配置 ====================
@@ -22,43 +25,47 @@ class FrankaCartesianVelocityController:
 
         # 状态订阅者，获取包含 O_T_EE (末端位姿) 的机械臂状态
         self.state_sub = rospy.Subscriber(
-            '/franka_state_controller/franka_states', 
-            FrankaState, 
+            '/franka_state_controller/franka_states',
+            FrankaState,
             self._state_callback
         )
 
-        # 控制频率设为 200Hz 以满足平滑要求
-        self.rate = rospy.Rate(200) 
-        
-        # 存储笛卡尔状态的内部变量
-        self.current_pose_matrix = None 
-        self.current_pos = np.zeros(3)  
-        self.current_quat = np.array([0.0, 0.0, 0.0, 1.0]) 
+        # 夹爪控制与状态
+        self.gripper_move_pub = rospy.Publisher('/franka_gripper/move/goal', MoveActionGoal, queue_size=10)
+        self.gripper_grasp_pub = rospy.Publisher('/franka_gripper/grasp/goal', GraspActionGoal, queue_size=10)
+        self.gripper_state_sub = rospy.Subscriber('/franka_gripper/joint_states', JointState, self._gripper_state_callback)
+        self.gripper_positions = []
 
-        # 固定初始位姿（你刚刚采集到的）
+        # 控制频率设为 200Hz 以满足平滑要求
+        self.rate = rospy.Rate(200)
+
+        # 存储笛卡尔状态的内部变量
+        self.current_pose_matrix = None
+        self.current_pos = np.zeros(3, dtype=np.float64)
+        self.current_quat = np.array([0.0, 0.0, 0.0, 1.0], dtype=np.float64)
+
+        # 固定初始位姿
         self.initial_pose_matrix = np.array([
-            [ 9.9999032943e-01, -2.2293657136e-04, -1.9555093429e-04,  3.0687314493e-01],
+            [9.9999032943e-01, -2.2293657136e-04, -1.9555093429e-04, 3.0687314493e-01],
             [-2.2299660341e-04, -9.9999030141e-01, -3.0702421719e-04, -6.6142970518e-05],
-            [-1.9548059080e-04,  3.0706485529e-04, -9.9999993375e-01,  4.8692429186e-01],
-            [ 0.0000000000e+00,  0.0000000000e+00,  0.0000000000e+00,  1.0000000000e+00]
+            [-1.9548059080e-04, 3.0706485529e-04, -9.9999993375e-01, 4.8692429186e-01],
+            [0.0000000000e+00, 0.0000000000e+00, 0.0000000000e+00, 1.0000000000e+00]
         ], dtype=np.float64)
 
         self.initial_pos = np.array([
             3.0687314493e-01,
-           -6.6142970518e-05,
+            -6.6142970518e-05,
             4.8692429186e-01
         ], dtype=np.float64)
 
         self.initial_quat = np.array([
             9.9999757057e-01,
-           -1.1148356454e-04,
-           -9.7758118769e-05,
+            -1.1148356454e-04,
+            -9.7758118769e-05,
             1.5352264109e-04
         ], dtype=np.float64)
 
-        
         rospy.loginfo("Franka Cartesian Velocity Controller 初始化完成，等待状态更新...")
-
 
     # ==================== 主要可调用函数 ====================
     def get_cartesian_pose(self):
@@ -74,7 +81,6 @@ class FrankaCartesianVelocityController:
     def set_cartesian_twist(self, linear=[0.0, 0.0, 0.0], angular=[0.0, 0.0, 0.0]):
         """
         下发笛卡尔速度指令。
-        底层 C++ 已实现 0.005 的一阶低通滤波，因此这里可以直接输入目标速度。
         """
         vel_msg = Twist()
         vel_msg.linear.x, vel_msg.linear.y, vel_msg.linear.z = linear
@@ -82,64 +88,102 @@ class FrankaCartesianVelocityController:
         self.vel_pub.publish(vel_msg)
 
     def stop_motion(self):
-        """ 紧急停止末端运动 """
+        """紧急停止末端运动。"""
         self.set_cartesian_twist([0.0, 0.0, 0.0], [0.0, 0.0, 0.0])
 
+    def get_gripper_width(self):
+        """获取当前夹爪张开宽度。"""
+        if not self.gripper_positions:
+            rospy.logwarn("No gripper positions received yet.")
+            return None
+        return float(sum(self.gripper_positions))
+
+    def open_gripper(self, width=0.08, speed=0.5):
+        """打开夹爪。"""
+        while self.gripper_move_pub.get_num_connections() == 0 and not rospy.is_shutdown():
+            rospy.sleep(0.05)
+        move_goal = MoveActionGoal()
+        move_goal.goal.width = width
+        move_goal.goal.speed = speed
+        self.gripper_move_pub.publish(move_goal)
+
+    def close_gripper(self, width=0.055, force=5.0, speed=0.1, inner_epsilon=0.005, outer_epsilon=0.005):
+        """闭合夹爪。"""
+        while self.gripper_grasp_pub.get_num_connections() == 0 and not rospy.is_shutdown():
+            rospy.sleep(0.05)
+        grasp_goal = GraspGoal()
+        grasp_goal.width = width
+        grasp_goal.speed = speed
+        grasp_goal.force = force
+        grasp_goal.epsilon.inner = inner_epsilon
+        grasp_goal.epsilon.outer = outer_epsilon
+        action_goal = GraspActionGoal()
+        action_goal.goal = grasp_goal
+        self.gripper_grasp_pub.publish(action_goal)
 
     def go_to_initial_position(self, kp=1.2, ki=0.08, max_linear_vel=0.05, pos_tolerance=0.001, timeout=15.0, integral_limit=0.05):
-        """使用 PI 控制器将末端平滑地回到初始位置"""
+        """使用 PI 控制器将末端平滑地回到初始位置。"""
         if self.initial_pos is None:
             rospy.logwarn("initial_pos 未设置")
             return False
+
         start_time = rospy.Time.now().to_sec()
         last_time = start_time
         integral = np.zeros(3, dtype=np.float64)
+
         rospy.loginfo("开始回到初始位置")
         while not rospy.is_shutdown():
             if self.current_pose_matrix is None:
                 self.stop_motion()
                 self.rate.sleep()
                 continue
+
             now = rospy.Time.now().to_sec()
             dt = max(now - last_time, 1e-4)
             last_time = now
+
             error = self.initial_pos - self.current_pos
             distance = np.linalg.norm(error)
+
             if distance < pos_tolerance:
                 self.stop_motion()
                 rospy.loginfo("已回到初始位置, 误差 {:.6f} m".format(distance))
                 return True
+
             integral += error * dt
             integral = np.clip(integral, -integral_limit, integral_limit)
+
             linear_cmd = kp * error + ki * integral
             norm = np.linalg.norm(linear_cmd)
             if norm > max_linear_vel:
                 linear_cmd = linear_cmd / norm * max_linear_vel
+
             self.set_cartesian_twist(linear=linear_cmd.tolist(), angular=[0.0, 0.0, 0.0])
+
             if now - start_time > timeout:
                 self.stop_motion()
                 rospy.logwarn("回初始位置超时")
                 return False
+
             self.rate.sleep()
+
         self.stop_motion()
         return False
-
 
     # ==================== 内部回调函数 ====================
     def _state_callback(self, msg):
         """
         [内部调用] 解析 FrankaState 消息，提取末端执行器在基座坐标系下的位姿 (O_T_EE)。
         """
-        # O_T_EE 是一维数组，需按列优先 (Fortran order) 转换为 4x4 变换矩阵
-        matrix = np.array(msg.O_T_EE).reshape(4, 4, order='F') 
+        matrix = np.array(msg.O_T_EE, dtype=np.float64).reshape(4, 4, order='F')
         self.current_pose_matrix = matrix
-        
-        # 提取末端三维坐标 (x, y, z)
         self.current_pos = matrix[:3, 3]
-        
-        # 提取旋转矩阵并转为四元数 (x, y, z, w)，方便后续与 Touch 设备的姿态对齐
         self.current_quat = quaternion_from_matrix(matrix)
 
+    def _gripper_state_callback(self, msg):
+        """更新当前夹爪关节状态。"""
+        if msg.position is not None:
+            self.gripper_positions = list(msg.position)
 
     # ==================== 测试函数 ====================
     def test_soft_start_x_axis(self, target_v=0.03, step=0.0001):
@@ -148,30 +192,44 @@ class FrankaCartesianVelocityController:
         """
         rospy.loginfo("开始执行末端 X 轴平滑加速测试...")
         current_v = 0.0
-        
+
         try:
             while not rospy.is_shutdown():
                 if current_v < target_v:
                     current_v += step
-                    
-                self.set_cartesian_twist(linear=[current_v, 0.0, 0.0])
-                
-                # 实时反馈末端位置
+
+                self.set_cartesian_twist(linear=[current_v, 0.0, 0.0], angular=[0.0, 0.0, 0.0])
+
                 pos, _ = self.get_cartesian_pose()
                 if pos is not None:
                     rospy.loginfo_throttle(0.5, "当前末端 X 坐标: {:.4f} m".format(pos[0]))
-                
+
                 self.rate.sleep()
-                
+
         except rospy.ROSInterruptException:
-            # 依靠 C++ 底层控制器的低通滤波和看门狗来处理中断
             rospy.loginfo("测试手动中断，底层看门狗将自动归零速度。")
 
+    def test_gripper_toggle(self):
+        """测试夹爪开合。"""
+        rospy.loginfo("打开夹爪...")
+        self.open_gripper()
+        rospy.sleep(2.0)
+        rospy.loginfo("闭合夹爪...")
+        self.close_gripper()
+
+    def test_print_gripper_width(self):
+        """持续打印夹爪宽度。"""
+        while not rospy.is_shutdown():
+            width = self.get_gripper_width()
+            if width is not None:
+                rospy.loginfo_throttle(0.5, "当前夹爪宽度: {:.4f} m".format(width))
+            self.rate.sleep()
+
+
 if __name__ == '__main__':
-    
     try:
         arm = FrankaCartesianVelocityController()
-        rospy.sleep(1.0) # 等待订阅器建立连接
+        rospy.sleep(1.0)
 
         # =============测试函数写这里=============
 
@@ -181,8 +239,11 @@ if __name__ == '__main__':
         # 测试回到初始位置
         # arm.go_to_initial_position()
 
+        # 测试夹爪开合
+        # arm.test_gripper_toggle()
 
+        # 测试打印夹爪宽度
+        # arm.test_print_gripper_width()
 
     except rospy.ROSInterruptException:
         pass
-        
