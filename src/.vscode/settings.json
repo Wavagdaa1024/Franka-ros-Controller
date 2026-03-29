@@ -1,0 +1,14 @@
+{
+    "python.autoComplete.extraPaths": [
+        "/home/navaneet/panda_simulator/devel/lib/python3/dist-packages",
+        "/opt/ros/noetic/lib/python3/dist-packages",
+        "/home/navaneet/panda_simulator/devel/lib/python3/dist-packages",
+        "/opt/ros/noetic/lib/python3/dist-packages=/home/navaneet/panda_ik/build"
+    ],
+    "python.analysis.extraPaths": [
+        "/home/navaneet/panda_simulator/devel/lib/python3/dist-packages",
+        "/opt/ros/noetic/lib/python3/dist-packages",
+        "/home/navaneet/panda_simulator/devel/lib/python3/dist-packages",
+        "/opt/ros/noetic/lib/python3/dist-packages=/home/navaneet/panda_ik/build"
+    ]
+}

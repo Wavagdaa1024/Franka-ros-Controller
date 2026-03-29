@@ -1,0 +1,25 @@
+pick-and-place/pick_and_place
+/home/ssui/catkin_ws/devel/.private/pick_and_place/include/pick_and_place/DetectedObject.h /home/ssui/catkin_ws/devel/include/pick_and_place/DetectedObject.h
+/home/ssui/catkin_ws/devel/.private/pick_and_place/include/pick_and_place/DetectedObjectsStamped.h /home/ssui/catkin_ws/devel/include/pick_and_place/DetectedObjectsStamped.h
+/home/ssui/catkin_ws/devel/.private/pick_and_place/lib/python3/dist-packages/pick_and_place/__init__.py /home/ssui/catkin_ws/devel/lib/python3/dist-packages/pick_and_place/__init__.py
+/home/ssui/catkin_ws/devel/.private/pick_and_place/lib/python3/dist-packages/pick_and_place/msg/_DetectedObject.py /home/ssui/catkin_ws/devel/lib/python3/dist-packages/pick_and_place/msg/_DetectedObject.py
+/home/ssui/catkin_ws/devel/.private/pick_and_place/lib/python3/dist-packages/pick_and_place/msg/__init__.py /home/ssui/catkin_ws/devel/lib/python3/dist-packages/pick_and_place/msg/__init__.py
+/home/ssui/catkin_ws/devel/.private/pick_and_place/lib/python3/dist-packages/pick_and_place/msg/_DetectedObjectsStamped.py /home/ssui/catkin_ws/devel/lib/python3/dist-packages/pick_and_place/msg/_DetectedObjectsStamped.py
+/home/ssui/catkin_ws/devel/.private/pick_and_place/lib/pkgconfig/pick_and_place.pc /home/ssui/catkin_ws/devel/lib/pkgconfig/pick_and_place.pc
+/home/ssui/catkin_ws/devel/.private/pick_and_place/share/common-lisp/ros/pick_and_place/msg/DetectedObjectsStamped.lisp /home/ssui/catkin_ws/devel/share/common-lisp/ros/pick_and_place/msg/DetectedObjectsStamped.lisp
+/home/ssui/catkin_ws/devel/.private/pick_and_place/share/common-lisp/ros/pick_and_place/msg/DetectedObject.lisp /home/ssui/catkin_ws/devel/share/common-lisp/ros/pick_and_place/msg/DetectedObject.lisp
+/home/ssui/catkin_ws/devel/.private/pick_and_place/share/common-lisp/ros/pick_and_place/msg/_package.lisp /home/ssui/catkin_ws/devel/share/common-lisp/ros/pick_and_place/msg/_package.lisp
+/home/ssui/catkin_ws/devel/.private/pick_and_place/share/common-lisp/ros/pick_and_place/msg/_package_DetectedObjectsStamped.lisp /home/ssui/catkin_ws/devel/share/common-lisp/ros/pick_and_place/msg/_package_DetectedObjectsStamped.lisp
+/home/ssui/catkin_ws/devel/.private/pick_and_place/share/common-lisp/ros/pick_and_place/msg/pick_and_place-msg.asd /home/ssui/catkin_ws/devel/share/common-lisp/ros/pick_and_place/msg/pick_and_place-msg.asd
+/home/ssui/catkin_ws/devel/.private/pick_and_place/share/common-lisp/ros/pick_and_place/msg/_package_DetectedObject.lisp /home/ssui/catkin_ws/devel/share/common-lisp/ros/pick_and_place/msg/_package_DetectedObject.lisp
+/home/ssui/catkin_ws/devel/.private/pick_and_place/share/roseus/ros/pick_and_place/manifest.l /home/ssui/catkin_ws/devel/share/roseus/ros/pick_and_place/manifest.l
+/home/ssui/catkin_ws/devel/.private/pick_and_place/share/roseus/ros/pick_and_place/msg/DetectedObject.l /home/ssui/catkin_ws/devel/share/roseus/ros/pick_and_place/msg/DetectedObject.l
+/home/ssui/catkin_ws/devel/.private/pick_and_place/share/roseus/ros/pick_and_place/msg/DetectedObjectsStamped.l /home/ssui/catkin_ws/devel/share/roseus/ros/pick_and_place/msg/DetectedObjectsStamped.l
+/home/ssui/catkin_ws/devel/.private/pick_and_place/share/gennodejs/ros/pick_and_place/_index.js /home/ssui/catkin_ws/devel/share/gennodejs/ros/pick_and_place/_index.js
+/home/ssui/catkin_ws/devel/.private/pick_and_place/share/gennodejs/ros/pick_and_place/msg/DetectedObjectsStamped.js /home/ssui/catkin_ws/devel/share/gennodejs/ros/pick_and_place/msg/DetectedObjectsStamped.js
+/home/ssui/catkin_ws/devel/.private/pick_and_place/share/gennodejs/ros/pick_and_place/msg/DetectedObject.js /home/ssui/catkin_ws/devel/share/gennodejs/ros/pick_and_place/msg/DetectedObject.js
+/home/ssui/catkin_ws/devel/.private/pick_and_place/share/gennodejs/ros/pick_and_place/msg/_index.js /home/ssui/catkin_ws/devel/share/gennodejs/ros/pick_and_place/msg/_index.js
+/home/ssui/catkin_ws/devel/.private/pick_and_place/share/pick_and_place/cmake/pick_and_place-msg-extras.cmake /home/ssui/catkin_ws/devel/share/pick_and_place/cmake/pick_and_place-msg-extras.cmake
+/home/ssui/catkin_ws/devel/.private/pick_and_place/share/pick_and_place/cmake/pick_and_placeConfig-version.cmake /home/ssui/catkin_ws/devel/share/pick_and_place/cmake/pick_and_placeConfig-version.cmake
+/home/ssui/catkin_ws/devel/.private/pick_and_place/share/pick_and_place/cmake/pick_and_place-msg-paths.cmake /home/ssui/catkin_ws/devel/share/pick_and_place/cmake/pick_and_place-msg-paths.cmake
+/home/ssui/catkin_ws/devel/.private/pick_and_place/share/pick_and_place/cmake/pick_and_placeConfig.cmake /home/ssui/catkin_ws/devel/share/pick_and_place/cmake/pick_and_placeConfig.cmake

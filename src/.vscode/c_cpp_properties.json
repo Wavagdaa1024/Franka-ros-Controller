@@ -1,0 +1,31 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "${default}",
+        "limitSymbolsToIncludedHeaders": false
+      },
+      "includePath": [
+        "/home/navaneet/panda_simulator/devel/include/**",
+        "/opt/ros/noetic/include/**",
+        "/home/navaneet/panda_simulator/src/franka_ros/franka_control/include/**",
+        "/home/navaneet/panda_simulator/src/franka_ros/franka_example_controllers/include/**",
+        "/home/navaneet/panda_simulator/src/franka_ros/franka_gazebo/include/**",
+        "/home/navaneet/panda_simulator/src/franka_ros/franka_gripper/include/**",
+        "/home/navaneet/panda_simulator/src/franka_ros/franka_hw/include/**",
+        "/home/navaneet/panda_simulator/src/franka_ros_interface/franka_interface/include/**",
+        "/home/navaneet/panda_simulator/src/franka_ros_interface/franka_ros_controllers/include/**",
+        "/home/navaneet/panda_simulator/src/panda_simulator/panda_gazebo/include/**",
+        "/home/navaneet/panda_simulator/src/panda_simulator/panda_hardware_interface/include/**",
+        "/home/navaneet/panda_simulator/src/panda_simulator/panda_sim_controllers/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS",
+      "intelliSenseMode": "gcc-x64",
+      "compilerPath": "/usr/bin/gcc",
+      "cStandard": "gnu11",
+      "cppStandard": "c++14"
+    }
+  ],
+  "version": 4
+}
