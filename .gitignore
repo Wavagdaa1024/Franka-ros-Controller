@@ -1,5 +1,10 @@
+__pycache__/
+*.pyc
+*.pyo
+franka_ros_controller/real_dir/*
+!franka_ros_controller/real_dir/.gitignore
+
+.catkin_tools/
 build/
 devel/
 logs/
-.catkin_workspace
-.catkin_tools/

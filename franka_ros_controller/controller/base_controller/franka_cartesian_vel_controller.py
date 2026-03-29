@@ -23,7 +23,7 @@ class FrankaCartesianVelocityController:
         # 速度指令发布者，连接到底层 C++ 控制器
         self.vel_pub = rospy.Publisher(controller_topic, Twist, queue_size=1)
 
-        # 状态订阅者，获取包含 O_T_EE (末端位姿) 的机械臂状态
+        # 状态订阅者，获取包含 O_T_EE 和 q 的机械臂状态
         self.state_sub = rospy.Subscriber(
             '/franka_state_controller/franka_states',
             FrankaState,
@@ -39,10 +39,11 @@ class FrankaCartesianVelocityController:
         # 控制频率设为 200Hz 以满足平滑要求
         self.rate = rospy.Rate(200)
 
-        # 存储笛卡尔状态的内部变量
+        # 存储机械臂状态的内部变量
         self.current_pose_matrix = None
         self.current_pos = np.zeros(3, dtype=np.float64)
         self.current_quat = np.array([0.0, 0.0, 0.0, 1.0], dtype=np.float64)
+        self.current_joint_pos = None
 
         # 固定初始位姿
         self.initial_pose_matrix = np.array([
@@ -77,6 +78,16 @@ class FrankaCartesianVelocityController:
             rospy.logwarn_once("尚未接收到 Franka 末端笛卡尔状态数据。")
             return None, None
         return self.current_pos, self.current_quat
+
+    def get_joint_positions(self):
+        """
+        获取当前 7 维关节角。
+        返回: joint_positions (7,)
+        """
+        if self.current_joint_pos is None:
+            rospy.logwarn_once("尚未接收到 Franka 关节状态数据。")
+            return None
+        return self.current_joint_pos.copy()
 
     def set_cartesian_twist(self, linear=[0.0, 0.0, 0.0], angular=[0.0, 0.0, 0.0]):
         """
@@ -173,12 +184,13 @@ class FrankaCartesianVelocityController:
     # ==================== 内部回调函数 ====================
     def _state_callback(self, msg):
         """
-        [内部调用] 解析 FrankaState 消息，提取末端执行器在基座坐标系下的位姿 (O_T_EE)。
+        [内部调用] 解析 FrankaState 消息，提取末端位姿和关节角。
         """
         matrix = np.array(msg.O_T_EE, dtype=np.float64).reshape(4, 4, order='F')
         self.current_pose_matrix = matrix
         self.current_pos = matrix[:3, 3]
         self.current_quat = quaternion_from_matrix(matrix)
+        self.current_joint_pos = np.array(msg.q, dtype=np.float64)
 
     def _gripper_state_callback(self, msg):
         """更新当前夹爪关节状态。"""
@@ -209,6 +221,27 @@ class FrankaCartesianVelocityController:
         except rospy.ROSInterruptException:
             rospy.loginfo("测试手动中断，底层看门狗将自动归零速度。")
 
+    def test_check_franka_state_once(self, timeout=3.0):
+        """一次性检查 FrankaState 中的末端位姿和关节角是否都能收到。"""
+        rospy.loginfo("等待一帧 /franka_state_controller/franka_states ...")
+        msg = rospy.wait_for_message('/franka_state_controller/franka_states', FrankaState, timeout=timeout)
+
+        matrix = np.array(msg.O_T_EE, dtype=np.float64).reshape(4, 4, order='F')
+        pos = matrix[:3, 3]
+        quat = quaternion_from_matrix(matrix)
+        q = np.array(msg.q, dtype=np.float64)
+
+        rospy.loginfo("O_T_EE length: {}".format(len(msg.O_T_EE)))
+        rospy.loginfo("q length: {}".format(len(msg.q)))
+        rospy.loginfo("pos: {}".format(np.round(pos, 6)))
+        rospy.loginfo("quat: {}".format(np.round(quat, 6)))
+        rospy.loginfo("q: {}".format(np.round(q, 6)))
+
+        self.current_pose_matrix = matrix
+        self.current_pos = pos
+        self.current_quat = quat
+        self.current_joint_pos = q
+
     def test_gripper_toggle(self):
         """测试夹爪开合。"""
         rospy.loginfo("打开夹爪...")
@@ -225,6 +258,14 @@ class FrankaCartesianVelocityController:
                 rospy.loginfo_throttle(0.5, "当前夹爪宽度: {:.4f} m".format(width))
             self.rate.sleep()
 
+    def test_print_joint_positions(self):
+        """持续打印当前 7 维关节角。"""
+        while not rospy.is_shutdown():
+            q = self.get_joint_positions()
+            if q is not None:
+                rospy.loginfo_throttle(0.5, "当前关节角: {}".format(np.round(q, 4)))
+            self.rate.sleep()
+
 
 if __name__ == '__main__':
     try:
@@ -232,18 +273,7 @@ if __name__ == '__main__':
         rospy.sleep(1.0)
 
         # =============测试函数写这里=============
-
-        # 测试末端速度控制程序
-        arm.test_soft_start_x_axis()
-
-        # 测试回到初始位置
-        # arm.go_to_initial_position()
-
-        # 测试夹爪开合
-        # arm.test_gripper_toggle()
-
-        # 测试打印夹爪宽度
-        # arm.test_print_gripper_width()
+        arm.test_check_franka_state_once()
 
     except rospy.ROSInterruptException:
         pass

@@ -5,8 +5,8 @@ import time
 import numpy as np
 import rospy
 
-from touch_controller import TouchController
-from franka_cartesian_vel_controller import FrankaCartesianVelocityController
+from controller.base_controller.touch_controller import TouchController
+from controller.base_controller.franka_cartesian_vel_controller import FrankaCartesianVelocityController
 
 
 class TouchFrankaTeleopController:
