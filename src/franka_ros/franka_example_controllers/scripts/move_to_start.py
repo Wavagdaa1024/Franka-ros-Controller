@@ -25,6 +25,13 @@ def move_to_start():
             rospy.logerr("未找到目标姿态参数: %s" % param_name)
             return
         target_pose.append(rospy.get_param(param_name))
+        
+    # ==================== 新增：打印读取到的初始姿态 ====================
+    rospy.loginfo("成功读取初始姿态参数！")
+    for name, pos in zip(joint_names, target_pose):
+        rospy.loginfo("  %s: %.4f rad", name, pos)
+    rospy.loginfo("--------------------------------------------------")
+    # =================================================================
 
     # 读取速度限制参数
     max_dq = rospy.get_param('~max_dq', 0.2)
