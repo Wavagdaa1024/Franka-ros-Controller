@@ -25,20 +25,36 @@ class TeleopDatasetRecorder:
                  touch=None,
                  cameras=None,
                  camera_names=None,
-                 save_dir="real_dir2",
+                 save_dir="real_dir",
                  record_rate_hz=20,
-                 show_preview=True):
+                 show_preview=True,
+                 gripper_close_threshold=0.04):
         """
         初始化数据记录器。
 
-        参数:
-            arm: FrankaCartesianVelocityController 对象，默认自动创建
-            touch: TouchController 对象，默认自动创建
-            cameras: RealSenseCamera 对象列表，默认自动创建一个
-            camera_names: 相机名称列表，需与 cameras 一一对应
-            save_dir: 数据保存目录
-            record_rate_hz: 记录频率，默认 20Hz，即每 50ms 记录一次
-            show_preview: 是否显示相机预览窗口
+        原始数据结构:
+            episode_x.hdf5
+            ├── attributes
+            │   ├── sim = False
+            │   └── frequency = 20
+            ├── observations
+            │   ├── images/top
+            │   ├── robot_joint
+            │   ├── robot_eef_pos
+            │   ├── robot_eef_quat
+            │   ├── robot_gripper_width
+            │   ├── touch_position
+            │   └── timestamp
+            └── action
+
+        其中:
+            robot_joint: [q1, q2, q3, q4, q5, q6, q7]
+            robot_eef_pos: [x, y, z]
+            robot_eef_quat: [qx, qy, qz, qw]
+            robot_gripper_width: [gripper_width]
+            touch_position: [tx, ty, tz]
+            timestamp: [timestamp]
+            action: [dx, dy, dz, gripper_cmd]
         """
         self.arm = arm if arm is not None else FrankaCartesianVelocityController()
         self.touch = touch if touch is not None else TouchController()
@@ -57,6 +73,7 @@ class TeleopDatasetRecorder:
         self.save_dir = save_dir
         self.record_rate_hz = record_rate_hz
         self.show_preview = show_preview
+        self.gripper_close_threshold = gripper_close_threshold
 
         self.recording = False
         self._running = False
@@ -66,9 +83,12 @@ class TeleopDatasetRecorder:
         self._keyboard_old_settings = None
 
         self.image_data = {name: [] for name in self.camera_names}
-        self.qpos_data = []
-        self.cartesian_pose_data = []
+        self.robot_joint_data = []
+        self.robot_eef_pos_data = []
+        self.robot_eef_quat_data = []
+        self.robot_gripper_width_data = []
         self.touch_position_data = []
+        self.timestamp_data = []
         self.action_data = []
 
     #============ 键盘控制 ================
@@ -105,39 +125,15 @@ class TeleopDatasetRecorder:
             return 0.0
         return float(width)
 
-    def get_qpos(self):
-        """
-        获取主状态 qpos。
-
-        格式:
-            [joint1, ..., joint7, gripper_width]
-        """
-        joint_angles = self.get_joint_angles()
-        if joint_angles is None:
-            return None
-        gripper_width = self.get_gripper_width()
-        return np.concatenate((joint_angles, [gripper_width])).astype(np.float64)
-
-    def get_cartesian_pose(self):
-        """
-        获取末端笛卡尔位姿。
-
-        格式:
-            [x, y, z, qx, qy, qz, qw, gripper_width]
-        """
+    def get_eef_pos_quat(self):
+        """获取当前末端位置和四元数。"""
         pos, quat = self.arm.get_cartesian_pose()
         if pos is None or quat is None:
-            return None
-        gripper_width = self.get_gripper_width()
-        return np.concatenate((pos, quat, [gripper_width])).astype(np.float64)
+            return None, None
+        return pos.astype(np.float64), quat.astype(np.float64)
 
     def get_touch_position(self):
-        """
-        获取 Touch 当前三维位置。
-
-        格式:
-            [tx, ty, tz]
-        """
+        """获取 Touch 当前三维位置。"""
         if not self.touch.has_state():
             return None
         return self.touch.get_position().astype(np.float64)
@@ -172,9 +168,12 @@ class TeleopDatasetRecorder:
         self.recording = True
         self._last_record_time = 0.0
         self.image_data = {name: [] for name in self.camera_names}
-        self.qpos_data = []
-        self.cartesian_pose_data = []
+        self.robot_joint_data = []
+        self.robot_eef_pos_data = []
+        self.robot_eef_quat_data = []
+        self.robot_gripper_width_data = []
         self.touch_position_data = []
+        self.timestamp_data = []
         self.action_data = []
         print("Recording started.")
 
@@ -192,18 +191,28 @@ class TeleopDatasetRecorder:
         if save:
             self.save_data()
 
-    def record_step(self, action=None):
+    def _default_action(self, gripper_width):
+        """
+        默认动作。
+        当外部未传入 action 时，使用零位移 + 基于当前夹爪宽度估计的开合状态。
+        """
+        gripper_cmd = 1.0 if gripper_width < self.gripper_close_threshold else 0.0
+        return np.array([0.0, 0.0, 0.0, gripper_cmd], dtype=np.float64)
+
+    def record_step(self, action=None, timestamp=None):
         """
         记录一个时间步的数据。
 
         参数:
-            action: 当前动作；若为 None，则默认存当前 qpos
+            action: 当前动作, 格式 [dx, dy, dz, gripper_cmd]
+            timestamp: 当前时间戳; 若为 None 则用 time.time()
         """
-        qpos = self.get_qpos()
-        cartesian_pose = self.get_cartesian_pose()
+        joint_angles = self.get_joint_angles()
+        eef_pos, eef_quat = self.get_eef_pos_quat()
+        gripper_width = self.get_gripper_width()
         touch_position = self.get_touch_position()
 
-        if qpos is None or cartesian_pose is None or touch_position is None:
+        if joint_angles is None or eef_pos is None or eef_quat is None or touch_position is None:
             return False
 
         for camera, name in zip(self.cameras, self.camera_names):
@@ -212,12 +221,15 @@ class TeleopDatasetRecorder:
                 return False
             self.image_data[name].append(color_image_rgb)
 
-        self.qpos_data.append(qpos)
-        self.cartesian_pose_data.append(cartesian_pose)
-        self.touch_position_data.append(touch_position)
+        self.robot_joint_data.append(np.asarray(joint_angles, dtype=np.float64))
+        self.robot_eef_pos_data.append(np.asarray(eef_pos, dtype=np.float64))
+        self.robot_eef_quat_data.append(np.asarray(eef_quat, dtype=np.float64))
+        self.robot_gripper_width_data.append(np.asarray([gripper_width], dtype=np.float64))
+        self.touch_position_data.append(np.asarray(touch_position, dtype=np.float64))
+        self.timestamp_data.append(np.asarray([time.time() if timestamp is None else timestamp], dtype=np.float64))
 
         if action is None:
-            self.action_data.append(qpos.copy())
+            self.action_data.append(self._default_action(gripper_width))
         else:
             self.action_data.append(np.asarray(action, dtype=np.float64))
 
@@ -238,7 +250,7 @@ class TeleopDatasetRecorder:
 
     def save_data(self):
         """保存当前缓存数据到 HDF5。"""
-        if len(self.qpos_data) == 0:
+        if len(self.robot_joint_data) == 0:
             print("No data to save.")
             return None
 
@@ -246,6 +258,7 @@ class TeleopDatasetRecorder:
 
         with h5py.File(file_path, "w") as root:
             root.attrs["sim"] = False
+            root.attrs["frequency"] = self.record_rate_hz
 
             obs = root.create_group("observations")
             images = obs.create_group("images")
@@ -261,13 +274,16 @@ class TeleopDatasetRecorder:
                     chunks=(1, image_array.shape[1], image_array.shape[2], image_array.shape[3])
                 )
 
-            obs.create_dataset("qpos", data=np.asarray(self.qpos_data, dtype=np.float64))
-            obs.create_dataset("cartesian_pose", data=np.asarray(self.cartesian_pose_data, dtype=np.float64))
+            obs.create_dataset("robot_joint", data=np.asarray(self.robot_joint_data, dtype=np.float64))
+            obs.create_dataset("robot_eef_pos", data=np.asarray(self.robot_eef_pos_data, dtype=np.float64))
+            obs.create_dataset("robot_eef_quat", data=np.asarray(self.robot_eef_quat_data, dtype=np.float64))
+            obs.create_dataset("robot_gripper_width", data=np.asarray(self.robot_gripper_width_data, dtype=np.float64))
             obs.create_dataset("touch_position", data=np.asarray(self.touch_position_data, dtype=np.float64))
+            obs.create_dataset("timestamp", data=np.asarray(self.timestamp_data, dtype=np.float64))
             root.create_dataset("action", data=np.asarray(self.action_data, dtype=np.float64))
 
         print("Saved episode to:", file_path)
-        print("Frames:", len(self.qpos_data))
+        print("Frames:", len(self.robot_joint_data))
         return file_path
 
     #============ 预览与主循环 ================
@@ -319,7 +335,7 @@ class TeleopDatasetRecorder:
 
                 now = time.time()
                 if self.recording and (now - self._last_record_time) >= dt:
-                    ok = self.record_step()
+                    ok = self.record_step(action=None, timestamp=now)
                     if ok:
                         self._last_record_time = now
                     else:

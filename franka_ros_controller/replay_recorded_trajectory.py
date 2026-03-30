@@ -57,6 +57,8 @@ class RecordedTrajectoryReplayer:
         self.positions = None
         self.quaternions = None
         self.gripper_widths = None
+        self.timestamps = None
+        self.frequency = None
 
         self._integral_error = np.zeros(3, dtype=np.float64)
         self._last_time = None
@@ -93,11 +95,21 @@ class RecordedTrajectoryReplayer:
     def load_data(self):
         """从 hdf5 文件中加载轨迹数据。"""
         with h5py.File(self.hdf5_path, "r") as f:
-            cartesian_pose = np.asarray(f["observations"]["cartesian_pose"], dtype=np.float64)
+            obs = f["observations"]
 
-        self.positions = cartesian_pose[:, :3]
-        self.quaternions = cartesian_pose[:, 3:7]
-        self.gripper_widths = cartesian_pose[:, 7]
+            self.positions = np.asarray(obs["robot_eef_pos"], dtype=np.float64)
+            self.quaternions = np.asarray(obs["robot_eef_quat"], dtype=np.float64)
+            self.gripper_widths = np.asarray(obs["robot_gripper_width"], dtype=np.float64).reshape(-1)
+
+            if "timestamp" in obs:
+                self.timestamps = np.asarray(obs["timestamp"], dtype=np.float64).reshape(-1)
+            else:
+                self.timestamps = None
+
+            self.frequency = float(f.attrs["frequency"]) if "frequency" in f.attrs else None
+
+        if self.timestamps is None and self.frequency is not None:
+            self.sample_dt = 1.0 / self.frequency
 
         print("Loaded trajectory from:", self.hdf5_path)
         print("Frames:", len(self.positions))
@@ -163,6 +175,18 @@ class RecordedTrajectoryReplayer:
             self._gripper_closed = False
             rospy.loginfo("Replay gripper: open")
 
+
+    def _get_replay_index(self, elapsed, total_frames):
+        """根据 elapsed time 获取当前应重放的轨迹索引。"""
+        if self.timestamps is not None and len(self.timestamps) == total_frames:
+            rel_time = self.timestamps - self.timestamps[0]
+            idx = np.searchsorted(rel_time, elapsed, side="right") - 1
+            idx = max(0, min(idx, total_frames - 1))
+            return idx
+
+        idx = min(int(elapsed / self.sample_dt), total_frames - 1)
+        return idx
+
     #============ 重放流程 ================
 
     def move_to_start_pose(self, timeout=10.0):
@@ -225,7 +249,7 @@ class RecordedTrajectoryReplayer:
                 break
 
             elapsed = time.time() - start_time
-            idx = min(int(elapsed / self.sample_dt), total_frames - 1)
+            idx = self._get_replay_index(elapsed, total_frames)
 
             target_pos = self.positions[idx]
             target_width = self.gripper_widths[idx]
@@ -299,7 +323,7 @@ if __name__ == "__main__":
             max_linear_vel=0.08,
             pos_tolerance=0.002,
             integral_limit=0.01,
-            close_threshold=0.04
+            close_threshold=0.06
         )
         replayer.run()
 
