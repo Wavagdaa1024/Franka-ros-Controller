@@ -1,4 +1,4 @@
-# Franka ROS Controller
+# franka_ros_controller_master
 
 基于 ROS 的 Franka 机械臂遥操作与数据采集项目，当前支持：
 
@@ -45,7 +45,7 @@ episode_x.hdf5
 └── action                   # [dx, dy, dz, gripper_cmd]
 
 ```
-### 数据集转换后测试代码
+### 数据集转换后测试代码——注意文件路径
 ```bash
 python - <<'PY'
 import h5py
@@ -73,11 +73,6 @@ with h5py.File(path, "r") as f:
     print("max xyz:", a[:, :3].max(axis=0))
 PY
 
-
-
-
-
-
 ```bash
 @'
 import h5py
@@ -90,7 +85,11 @@ with h5py.File(path, "r") as f:
     print("min xyz:", a[:, :3].min(axis=0))
     print("max xyz:", a[:, :3].max(axis=0))
 '@ | python -
+
 ```
+
+# franka_ros_controller_remote
+另一台电脑控制franka
 
 
 ## 日志
