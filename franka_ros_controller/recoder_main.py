@@ -31,11 +31,9 @@ class RecorderMain:
         """
         初始化总控类，统一管理 Touch、Franka、相机、主从控制和数据记录。
 
-        记录用 action 定义为:
-            [dx, dy, dz, gripper_cmd]
-        其中:
-            dx, dy, dz: 当前末端位置到目标末端位置的增量
-            gripper_cmd: 0.0 表示打开, 1.0 表示闭合
+        说明:
+            原始录制数据不再保存 action。
+            训练用 action 在后处理转换阶段由 robot_eef_pos / robot_gripper_width 生成。
         """
         self.touch = TouchController()
         self.arm = FrankaCartesianVelocityController()
@@ -84,33 +82,21 @@ class RecorderMain:
 
         返回:
             linear_cmd: 实际发送给机器人底层的速度命令, shape=(3,)
-            action: 用于数据集记录的动作, shape=(4,)
-                    [dx, dy, dz, gripper_cmd]
         """
         current_pos, _ = self.arm.get_cartesian_pose()
         if current_pos is None:
             self.arm.stop_motion()
-            return np.zeros(3, dtype=np.float64), np.zeros(4, dtype=np.float64)
-
-        gripper_cmd = 1.0 if self.teleop._gripper_closed else 0.0
+            return np.zeros(3, dtype=np.float64)
 
         if not self.teleop._teleop_enabled:
             self.arm.stop_motion()
-            action = np.array([0.0, 0.0, 0.0, gripper_cmd], dtype=np.float64)
-            return np.zeros(3, dtype=np.float64), action
+            return np.zeros(3, dtype=np.float64)
 
-        target_pos = self.teleop.compute_target_position()
-        delta_pos = target_pos - current_pos
-
+        self.teleop.compute_target_position()
         linear_cmd = self.teleop.compute_velocity_command()
         self.arm.set_cartesian_twist(linear=linear_cmd.tolist(), angular=[0.0, 0.0, 0.0])
 
-        action = np.array(
-            [delta_pos[0], delta_pos[1], delta_pos[2], gripper_cmd],
-            dtype=np.float64
-        )
-
-        return linear_cmd, action
+        return linear_cmd
 
     #============ 输入处理 ================
 
@@ -170,14 +156,13 @@ class RecorderMain:
                 self.handle_keyboard()
                 self.handle_touch_buttons()
 
-                _, action = self.teleop_step()
-
+                self.teleop_step()
                 self.recorder._show_preview()
 
                 now = time.time()
                 record_dt = 1.0 / float(self.recorder.record_rate_hz)
                 if self.recorder.recording and (now - self.recorder._last_record_time) >= record_dt:
-                    ok = self.recorder.record_step(action=action, timestamp=now)
+                    ok = self.recorder.record_step(timestamp=now)
                     if ok:
                         self.recorder._last_record_time = now
                     else:
@@ -206,7 +191,7 @@ if __name__ == "__main__":
     app = RecorderMain(
         save_dir="real_dir",
         teleop_hz=100,
-        record_hz=10,             # 调整录制间隔
+        record_hz=10,
         touch_scale=0.0015 * 2,
         kp=1.5 * 2,
         ki=0.15,
@@ -217,3 +202,4 @@ if __name__ == "__main__":
         show_preview=True
     )
     app.run()
+

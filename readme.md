@@ -45,6 +45,52 @@ episode_x.hdf5
 └── action                   # [dx, dy, dz, gripper_cmd]
 
 ```
+### 数据集转换后测试代码
+```bash
+python - <<'PY'
+import h5py
+import numpy as np
+
+path = "/home/ssui/catkin1_ws/franka_ros_controller/for_diffusion_policy/data/franka_image/image.hdf5"
+with h5py.File(path, "r") as f:
+    a = np.asarray(f["data"]["demo_56"]["actions"][:10])
+    print(a)
+    print("min xyz:", a[:, :3].min(axis=0))
+    print("max xyz:", a[:, :3].max(axis=0))
+PY
+
+```
+
+python - <<'PY'
+import h5py
+import numpy as np
+
+path = "/root/autodl-tmp/data/image.hdf5"
+with h5py.File(path, "r") as f:
+    a = np.asarray(f["data"]["demo_0"]["actions"][:10])
+    print(a)
+    print("min xyz:", a[:, :3].min(axis=0))
+    print("max xyz:", a[:, :3].max(axis=0))
+PY
+
+
+
+
+
+
+```bash
+@'
+import h5py
+import numpy as np
+
+path = r"D:\image.hdf5"
+with h5py.File(path, "r") as f:
+    a = np.asarray(f["data"]["demo_0"]["actions"][:10])
+    print(a)
+    print("min xyz:", a[:, :3].min(axis=0))
+    print("max xyz:", a[:, :3].max(axis=0))
+'@ | python -
+```
 
 
 ## 日志

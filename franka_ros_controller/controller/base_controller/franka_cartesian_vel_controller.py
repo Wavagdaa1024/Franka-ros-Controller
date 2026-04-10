@@ -36,6 +36,12 @@ class FrankaCartesianVelocityController:
         self.gripper_state_sub = rospy.Subscriber('/franka_gripper/joint_states', JointState, self._gripper_state_callback)
         self.gripper_positions = []
 
+        self.gripper_command_state = 'unknown'
+        self.open_trigger_count = 0
+        self.close_trigger_count = 0
+        self.gripper_last_cmd_time = 0.0
+        self.gripper_cmd_cooldown = 0.5
+
         # 控制频率设为 200Hz 以满足平滑要求
         self.rate = rospy.Rate(200)
 
@@ -131,6 +137,55 @@ class FrankaCartesianVelocityController:
         action_goal = GraspActionGoal()
         action_goal.goal = grasp_goal
         self.gripper_grasp_pub.publish(action_goal)
+
+    def update_gripper_with_protection(self, output_value,
+                                   open_threshold=0.8,
+                                   close_threshold=-0.8,
+                                   trigger_count=3,
+                                   cooldown=0.5):
+        """
+        带防抖保护的夹爪控制：
+        - 连续 trigger_count 次超过 open_threshold 才打开
+        - 连续 trigger_count 次低于 close_threshold 才关闭
+        - 中间区域清零计数
+        - 同状态不重复发命令
+        - 加 cooldown 防止短时间重复触发
+        """
+        now = rospy.Time.now().to_sec()
+
+        if now - self.gripper_last_cmd_time < cooldown:
+            return
+
+        if output_value >= open_threshold:
+            self.open_trigger_count += 1
+            self.close_trigger_count = 0
+        elif output_value <= close_threshold:
+            self.close_trigger_count += 1
+            self.open_trigger_count = 0
+        else:
+            self.open_trigger_count = 0
+            self.close_trigger_count = 0
+            return
+
+        if self.open_trigger_count >= trigger_count:
+            if self.gripper_command_state != 'open':
+                rospy.loginfo("Gripper protected open triggered.")
+                self.open_gripper()
+                self.gripper_command_state = 'open'
+                self.gripper_last_cmd_time = now
+            self.open_trigger_count = 0
+            self.close_trigger_count = 0
+
+        elif self.close_trigger_count >= trigger_count:
+            if self.gripper_command_state != 'close':
+                rospy.loginfo("Gripper protected close triggered.")
+                self.close_gripper()
+                self.gripper_command_state = 'close'
+                self.gripper_last_cmd_time = now
+            self.open_trigger_count = 0
+            self.close_trigger_count = 0
+
+
 
     def go_to_initial_position(self, kp=1.2, ki=0.08, max_linear_vel=0.05, pos_tolerance=0.001, timeout=15.0, integral_limit=0.05):
         """使用 PI 控制器将末端平滑地回到初始位置。"""

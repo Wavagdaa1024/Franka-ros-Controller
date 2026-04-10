@@ -38,9 +38,10 @@ policy:
   n_obs_steps: ${n_obs_steps}
   num_inference_steps: 100
 
-  crop_shape: [76, 76]
+  # crop_shape: [76, 76]
+  crop_shape: null
   obs_encoder_group_norm: True
-  eval_fixed_crop: True
+  eval_fixed_crop: False  # 改为false
 
   n_layer: 8
   n_cond_layers: 0

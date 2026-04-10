@@ -19,11 +19,11 @@ class FrankaRealDataConverter:
 
     def __init__(self,
                  input_dir="real_dir",
-                 output="diffusion_policy_real/data/franka_image/image.hdf5",
+                 output="/home/ssui/catkin1_ws/franka_ros_controller/for_diffusion_policy/data/franka_image/image.hdf5",
                  camera_name="top",
                  camera_key="camera_0",
-                 width=84,
-                 height=84,
+                 width=640,
+                 height=480,
                  target_hz=None,
                  gripper_close_threshold=0.04,
                  keep_touch=False):
@@ -117,20 +117,21 @@ class FrankaRealDataConverter:
             )
         return np.asarray(resized, dtype=np.uint8)
 
-    def build_actions(self, selected_pos, selected_gripper_width, raw_action, selected_indices):
-        """生成训练动作，格式为 [dx, dy, dz, gripper_cmd]。"""
-        n_steps = len(selected_indices)
+    def build_actions(self, selected_pos, selected_gripper_width):
+        """
+        生成训练动作，格式为 [x, y, z, gripper_cmd]。
+
+        说明:
+            不再依赖原始录制时保存的 action。
+            直接由末端绝对位置和夹爪宽度生成训练动作。
+        """
+        n_steps = len(selected_pos)
         actions = np.zeros((n_steps, 4), dtype=np.float32)
 
-        if n_steps > 1:
-            actions[:-1, :3] = (selected_pos[1:] - selected_pos[:-1]).astype(np.float32)
-
-        if raw_action is not None and raw_action.ndim == 2 and raw_action.shape[1] >= 4:
-            actions[:, 3] = raw_action[selected_indices, -1].astype(np.float32)
-        else:
-            actions[:, 3] = (
-                selected_gripper_width.reshape(-1) < self.gripper_close_threshold
-            ).astype(np.float32)
+        actions[:, :3] = selected_pos.astype(np.float32)
+        actions[:, 3] = (
+            selected_gripper_width.reshape(-1) < self.gripper_close_threshold
+        ).astype(np.float32)
 
         return actions
 
@@ -145,7 +146,6 @@ class FrankaRealDataConverter:
             robot_gripper_width = np.asarray(obs["robot_gripper_width"], dtype=np.float32)
             touch_position = np.asarray(obs["touch_position"], dtype=np.float32) if "touch_position" in obs else None
             timestamps = np.asarray(obs["timestamp"], dtype=np.float64).reshape(-1) if "timestamp" in obs else None
-            raw_action = np.asarray(root["action"], dtype=np.float32) if "action" in root else None
 
             source_hz = self.get_source_frequency(root, timestamps)
             sample_indices = self.build_sample_indices(
@@ -160,14 +160,13 @@ class FrankaRealDataConverter:
             episode["robot0_gripper_qpos"] = robot_gripper_width[sample_indices]
             episode["robot0_joint_qpos"] = robot_joint[sample_indices]
             episode["timestamp"] = timestamps[sample_indices].astype(np.float32) if timestamps is not None else None
+
             if self.keep_touch and touch_position is not None:
                 episode["teacher_touch_pos"] = touch_position[sample_indices]
 
             episode["actions"] = self.build_actions(
                 selected_pos=episode["robot0_eef_pos"],
                 selected_gripper_width=episode["robot0_gripper_qpos"],
-                raw_action=raw_action,
-                selected_indices=sample_indices
             )
             episode["images"] = self.resize_images(images[sample_indices])
             episode["n_steps"] = len(sample_indices)
@@ -253,7 +252,7 @@ def parse_args():
     parser.add_argument(
         "--output",
         type=str,
-        default="diffusion_policy_real/data/franka_image/image.hdf5",
+        default="/home/ssui/catkin1_ws/franka_ros_controller/for_diffusion_policy/data/franka_image/image.hdf5",
         help="Output robomimic-style HDF5 path"
     )
     parser.add_argument(
@@ -271,13 +270,13 @@ def parse_args():
     parser.add_argument(
         "--width",
         type=int,
-        default=84,
+        default=640,
         help="Target image width"
     )
     parser.add_argument(
         "--height",
         type=int,
-        default=84,
+        default=480,
         help="Target image height"
     )
     parser.add_argument(
@@ -290,7 +289,7 @@ def parse_args():
         "--gripper_close_threshold",
         type=float,
         default=0.04,
-        help="Threshold used to derive gripper command when needed"
+        help="Threshold used to derive gripper command"
     )
     parser.add_argument(
         "--keep_touch",
@@ -314,3 +313,4 @@ if __name__ == "__main__":
         keep_touch=args.keep_touch
     )
     converter.convert()
+

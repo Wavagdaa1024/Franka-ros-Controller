@@ -3,7 +3,7 @@ name: franka_image
 shape_meta: &shape_meta
   obs:
     camera_0:
-      shape: [3, 84, 84]
+      shape: [3, 480, 640]
       type: rgb
     robot0_eef_pos:
       shape: [3]

@@ -234,6 +234,7 @@ class RecordedTrajectoryReplayer:
         if not self.move_to_start_pose():
             return False
 
+
         rate = rospy.Rate(self.control_hz)
         self._reset_integral()
         start_time = time.time()
@@ -315,12 +316,12 @@ class RecordedTrajectoryReplayer:
 if __name__ == "__main__":
     try:
         replayer = RecordedTrajectoryReplayer(
-            hdf5_path="real_dir/episode_1.hdf5",
+            hdf5_path="real_dir/episode_28.hdf5",
             control_hz=100,
             sample_dt=0.05,
             kp=2.0,
             ki=0.03,
-            max_linear_vel=0.08,
+            max_linear_vel=0.1,
             pos_tolerance=0.002,
             integral_limit=0.01,
             close_threshold=0.06

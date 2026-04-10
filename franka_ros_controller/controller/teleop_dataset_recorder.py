@@ -27,8 +27,7 @@ class TeleopDatasetRecorder:
                  camera_names=None,
                  save_dir="real_dir",
                  record_rate_hz=20,
-                 show_preview=True,
-                 gripper_close_threshold=0.04):
+                 show_preview=True):
         """
         初始化数据记录器。
 
@@ -37,15 +36,14 @@ class TeleopDatasetRecorder:
             ├── attributes
             │   ├── sim = False
             │   └── frequency = 20
-            ├── observations
-            │   ├── images/top
-            │   ├── robot_joint
-            │   ├── robot_eef_pos
-            │   ├── robot_eef_quat
-            │   ├── robot_gripper_width
-            │   ├── touch_position
-            │   └── timestamp
-            └── action
+            └── observations
+                ├── images/top
+                ├── robot_joint
+                ├── robot_eef_pos
+                ├── robot_eef_quat
+                ├── robot_gripper_width
+                ├── touch_position
+                └── timestamp
 
         其中:
             robot_joint: [q1, q2, q3, q4, q5, q6, q7]
@@ -54,7 +52,10 @@ class TeleopDatasetRecorder:
             robot_gripper_width: [gripper_width]
             touch_position: [tx, ty, tz]
             timestamp: [timestamp]
-            action: [dx, dy, dz, gripper_cmd]
+
+        说明:
+            原始录制数据不再保存 action。
+            训练用 action 在后处理转换阶段根据观测重新生成。
         """
         self.arm = arm if arm is not None else FrankaCartesianVelocityController()
         self.touch = touch if touch is not None else TouchController()
@@ -73,7 +74,6 @@ class TeleopDatasetRecorder:
         self.save_dir = save_dir
         self.record_rate_hz = record_rate_hz
         self.show_preview = show_preview
-        self.gripper_close_threshold = gripper_close_threshold
 
         self.recording = False
         self._running = False
@@ -89,7 +89,6 @@ class TeleopDatasetRecorder:
         self.robot_gripper_width_data = []
         self.touch_position_data = []
         self.timestamp_data = []
-        self.action_data = []
 
     #============ 键盘控制 ================
 
@@ -174,7 +173,6 @@ class TeleopDatasetRecorder:
         self.robot_gripper_width_data = []
         self.touch_position_data = []
         self.timestamp_data = []
-        self.action_data = []
         print("Recording started.")
 
     def stop(self, save=True):
@@ -191,20 +189,11 @@ class TeleopDatasetRecorder:
         if save:
             self.save_data()
 
-    def _default_action(self, gripper_width):
-        """
-        默认动作。
-        当外部未传入 action 时，使用零位移 + 基于当前夹爪宽度估计的开合状态。
-        """
-        gripper_cmd = 1.0 if gripper_width < self.gripper_close_threshold else 0.0
-        return np.array([0.0, 0.0, 0.0, gripper_cmd], dtype=np.float64)
-
-    def record_step(self, action=None, timestamp=None):
+    def record_step(self, timestamp=None):
         """
         记录一个时间步的数据。
 
         参数:
-            action: 当前动作, 格式 [dx, dy, dz, gripper_cmd]
             timestamp: 当前时间戳; 若为 None 则用 time.time()
         """
         joint_angles = self.get_joint_angles()
@@ -227,11 +216,6 @@ class TeleopDatasetRecorder:
         self.robot_gripper_width_data.append(np.asarray([gripper_width], dtype=np.float64))
         self.touch_position_data.append(np.asarray(touch_position, dtype=np.float64))
         self.timestamp_data.append(np.asarray([time.time() if timestamp is None else timestamp], dtype=np.float64))
-
-        if action is None:
-            self.action_data.append(self._default_action(gripper_width))
-        else:
-            self.action_data.append(np.asarray(action, dtype=np.float64))
 
         return True
 
@@ -280,7 +264,6 @@ class TeleopDatasetRecorder:
             obs.create_dataset("robot_gripper_width", data=np.asarray(self.robot_gripper_width_data, dtype=np.float64))
             obs.create_dataset("touch_position", data=np.asarray(self.touch_position_data, dtype=np.float64))
             obs.create_dataset("timestamp", data=np.asarray(self.timestamp_data, dtype=np.float64))
-            root.create_dataset("action", data=np.asarray(self.action_data, dtype=np.float64))
 
         print("Saved episode to:", file_path)
         print("Frames:", len(self.robot_joint_data))
@@ -335,7 +318,7 @@ class TeleopDatasetRecorder:
 
                 now = time.time()
                 if self.recording and (now - self._last_record_time) >= dt:
-                    ok = self.record_step(action=None, timestamp=now)
+                    ok = self.record_step(timestamp=now)
                     if ok:
                         self._last_record_time = now
                     else:
@@ -365,3 +348,4 @@ if __name__ == "__main__":
         show_preview=True
     )
     recorder.run()
+
